@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GatePass AI | Smart Campus Security</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-shell">
+        <header class="navbar">
+            <div class="brand">
+                <div class="logo-badge">GP</div>
+                <div>
+                    <h1>GatePass AI <span class="badge-tag">Enterprise</span></h1>
+                    <span class="subtext">Campus Ingress & Overstay Prevention</span>
+                </div>
+            </div>
+            <div class="nav-actions">
+                <button class="btn-secondary" onclick="exportCSV()">Export CSV</button>
+            </div>
+        </header>
+
+        <!-- Metric Stat Cards -->
+        <section class="metrics-grid">
+            <div class="metric-card">
+                <span class="metric-label">Total Visits</span>
+                <h3 id="statTotal">0</h3>
+                <span class="metric-footnote">System-wide logs</span>
+            </div>
+            <div class="metric-card active-metric">
+                <span class="metric-label">Active Inside</span>
+                <h3 id="statInside">0</h3>
+                <span class="metric-footnote pulse-wrapper">
+                    <span class="dot-pulse"></span> Authorized on campus
+                </span>
+            </div>
+            <div class="metric-card extension-metric">
+                <span class="metric-label">Extended Approvals</span>
+                <h3 id="statExtended">0</h3>
+                <span class="metric-footnote" style="color: #c084fc;">Manual extra time granted</span>
+            </div>
+            <div class="metric-card warning-metric">
+                <span class="metric-label">Deadline Violations</span>
+                <h3 id="statOverstay">0</h3>
+                <span class="metric-footnote" style="color: #f87171;">Overstay alerts flagged</span>
+            </div>
+        </section>
+
+        <!-- Main Workspace -->
+        <div class="main-layout">
+            <!-- Left Side: Registration & Footfall Chart -->
+            <div class="left-col">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>Issue Visitor Clearance</h2>
+                        <p>Default authorized stay: <strong>60 minutes</strong></p>
+                    </div>
+                    <form id="visitorForm">
+                        <div class="input-group">
+                            <label for="name">Visitor Full Name</label>
+                            <input type="text" id="name" placeholder="e.g. Alex Johnson" required autocomplete="off">
+                        </div>
+                        <div class="input-group">
+                            <label for="phone">Phone Number</label>
+                            <input type="tel" id="phone" placeholder="+91 98765 43210" required autocomplete="off">
+                        </div>
+                        <div class="input-group">
+                            <label for="host">Host Department</label>
+                            <input type="text" id="host" placeholder="e.g. IT Department, Admin" required autocomplete="off">
+                        </div>
+                        <div class="input-group">
+                            <label for="purpose">Purpose of Visit</label>
+                            <input type="text" id="purpose" placeholder="e.g. Official Meeting, Lab Exam" required autocomplete="off">
+                        </div>
+                        <div class="input-group">
+                            <label for="entryTimeManual">Custom Entry Time (Optional)</label>
+                            <input type="datetime-local" id="entryTimeManual">
+                        </div>
+                        <button type="submit" class="btn-primary">Issue Pass & Authorize Ingress</button>
+                    </form>
+                </div>
+
+                <div class="panel" style="margin-top: 20px;">
+                    <div class="panel-header">
+                        <h2>Footfall by Faculty</h2>
+                        <p>Real-time department share</p>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="deptChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Live Logs -->
+            <div class="panel table-panel">
+                <div class="panel-header table-header-flex">
+                    <div>
+                        <h2>Live Gate Logs</h2>
+                        <p>Ingress records, dynamic deadlines, and administrative extensions</p>
+                    </div>
+                    <div class="table-controls">
+                        <input type="text" id="searchInput" placeholder="Search visitors or host..." oninput="filterLogs()">
+                        <select id="statusFilter" onchange="filterLogs()">
+                            <option value="ALL">All Records</option>
+                            <option value="Inside">Inside Premises</option>
+                            <option value="Extended">Manually Extended Only</option>
+                            <option value="Overstay">Overstay Alerts</option>
+                            <option value="Checked Out">Checked Out</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Pass ID</th>
+                                <th>Visitor Details</th>
+                                <th>Host / Purpose</th>
+                                <th>Entry</th>
+                                <th>Deadline</th>
+                                <th>Duration</th>
+                                <th>Status / Approvals</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="visitorTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual Extension Approval Modal -->
+    <div id="extendModal" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="badge-header">
+                <span class="badge-title">AUTHORIZE STAY EXTENSION</span>
+                <span class="close-btn" onclick="closeExtendModal()">&times;</span>
+            </div>
+            <div class="badge-body" style="text-align: left; padding: 20px;">
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
+                    Authorizing extra stay for <strong id="extendVisitorName" style="color: #fff;"></strong> (Pass <span id="extendPassId"></span>).
+                </p>
+                <div class="input-group">
+                    <label>Add Extra Duration</label>
+                    <select id="extraMinutes">
+                        <option value="30">+30 Minutes</option>
+                        <option value="60" selected>+1 Hour</option>
+                        <option value="120">+2 Hours</option>
+                        <option value="180">+3 Hours</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Approval Reason / Authorizing Person</label>
+                    <input type="text" id="extendReason" placeholder="e.g. Dean approved extended interview" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeExtendModal()">Cancel</button>
+                <button class="btn-primary" onclick="submitExtension()">Approve Extension</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Digital Pass Modal -->
+    <div id="passModal" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="badge-header">
+                <span class="badge-title">DIGITAL CAMPUS PASS</span>
+                <span class="close-btn" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="badge-body" id="printablePass">
+                <div class="badge-qr-container" id="qrcode"></div>
+                <h3 id="modalName">Visitor Name</h3>
+                <p id="modalHost" class="badge-subtext">Department</p>
+                <div class="badge-details-grid">
+                    <div><strong>Pass ID:</strong> <span id="modalId">#00</span></div>
+                    <div><strong>Phone:</strong> <span id="modalPhone">-</span></div>
+                    <div><strong>Check-in:</strong> <span id="modalTime">-</span></div>
+                    <div><strong>Valid Until:</strong> <span id="modalDeadline" style="color:#60a5fa; font-weight:700;">-</span></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="openEPassUrl()">Open E-Pass</button>
+                <button class="btn-primary" onclick="window.print()">Print Pass</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

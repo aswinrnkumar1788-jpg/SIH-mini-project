@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GatePass E-Card #{{ v.id }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body {
+            background-color: #080c14;
+            color: #f8fafc;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 16px;
+        }
+        .pass-card {
+            background: #0f172a;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 360px;
+            padding: 24px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+        }
+        .header {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #60a5fa;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+        .qr-box {
+            background: #ffffff;
+            padding: 12px;
+            border-radius: 12px;
+            display: inline-block;
+            margin-bottom: 16px;
+        }
+        h2 { margin: 0; font-size: 20px; }
+        .sub { color: #94a3b8; font-size: 13px; margin: 4px 0 20px; }
+        .info {
+            background: rgba(2, 6, 23, 0.7);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 14px;
+            text-align: left;
+            font-size: 13px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .tag {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 11px;
+        }
+        .tag-in { background: rgba(59, 130, 246, 0.2); color: #93c5fd; }
+        .tag-ext { background: rgba(192, 132, 252, 0.2); color: #d8b4fe; border: 1px solid rgba(192, 132, 252, 0.4); }
+    </style>
+</head>
+<body>
+    <div class="pass-card">
+        <div class="header">Smart Campus Digital Pass</div>
+        <div class="qr-box" id="qrcode"></div>
+        <h2>{{ v.name }}</h2>
+        <div class="sub">{{ v.host }} &bull; {{ v.purpose }}</div>
+        <div class="info">
+            <div><strong>Pass ID:</strong> #{{ v.id }}</div>
+            <div><strong>Check-in:</strong> {{ v.entry_time }}</div>
+            <div><strong>Valid Deadline:</strong> <span style="color:#60a5fa; font-weight:700;">{{ v.deadline_time }}</span></div>
+            {% if v.is_extended %}
+            <div><strong>Extension:</strong> <span class="tag tag-ext">Approved: {{ v.extension_note }}</span></div>
+            {% endif %}
+            <div><strong>Status:</strong> <span class="tag tag-in">{{ v.status }}</span></div>
+        </div>
+    </div>
+    <script>
+        new QRCode(document.getElementById("qrcode"), {
+            text: "{{ request.url }}",
+            width: 130,
+            height: 130
+        });
+    </script>
+</body>
+</html>
